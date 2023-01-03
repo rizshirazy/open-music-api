@@ -2,6 +2,7 @@ const { nanoid } = require('nanoid');
 const { Pool } = require('pg');
 const InvariantError = require('../../exceptions/InvariantError');
 const NotFoundError = require('../../exceptions/NotFoundError');
+const { isAlbumExists, mapSongResponse } = require('../../utils');
 
 class SongsService {
   constructor() {
@@ -16,20 +17,7 @@ class SongsService {
     duration = null,
     albumId = null,
   }) {
-    console.log(albumId);
-    if (albumId) {
-      const albumQuery = {
-        text: 'SELECT * FROM albums WHERE id = $1',
-        values: [albumId],
-      };
-
-      const album = await this._pool.query(albumQuery);
-      if (album.rows.length !== 1) {
-        throw new NotFoundError(
-          'Gagal menambahkan lagu. Album tidak ditemukan'
-        );
-      }
-    }
+    await isAlbumExists(albumId, this._pool);
 
     const id = `song-${nanoid(16)}`;
 
@@ -40,7 +28,6 @@ class SongsService {
 
     const result = await this._pool.query(query);
 
-    console.log(result);
     if (!result.rows.length) {
       throw new InvariantError('Lagu gagal ditambahkan');
     }
@@ -51,7 +38,7 @@ class SongsService {
   async getSongs() {
     const result = await this._pool.query({ text: 'SELECT * FROM songs' });
 
-    return result.rows;
+    return result.rows.map(mapSongResponse);
   }
 
   async getSongById(id) {
@@ -64,30 +51,23 @@ class SongsService {
       throw new NotFoundError('Lagu tidak ditemukan');
     }
 
-    return result.rows;
+    return result.rows[0];
   }
 
   async editSongById(
     id,
     { title, year, genre, performer, duration = null, albumId = null }
   ) {
-    if (albumId) {
-      const album = await this._pool.query({
-        text: 'SELECT * FROM albums WHERE id = $1',
-        values: [albumId],
+    await isAlbumExists(albumId, this._pool);
+
+    const result = await this._pool
+      .query({
+        text: 'UPDATE songs SET title = $1, year = $2, genre = $3, performer = $4, duration = $5, album_id = $6 WHERE id = $7 RETURNING id',
+        values: [title, year, genre, performer, duration, albumId, id],
+      })
+      .catch((e) => {
+        console.error(e.message);
       });
-
-      if (album.rows.length !== 1) {
-        throw new NotFoundError(
-          'Gagal memperbarui lagu. Album tidak ditemukan'
-        );
-      }
-    }
-
-    const result = await this._pool.query({
-      text: 'UPDATE songs SET title = $1, year = $2, genre = $3, performer = $4, duration = $5, albumId = $6 WHERE id = $7 RETURNING id',
-      values: [title, year, genre, performer, duration, albumId, id],
-    });
 
     if (!result.rows.length) {
       throw new NotFoundError('Gagal memperbarui lagu. Album tidak ditemukan');

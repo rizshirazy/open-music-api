@@ -58,12 +58,12 @@ const init = async () => {
       }
 
       // penanganan server error sesuai kebutuhan
-      return h
-        .response({
-          status: 'error',
-          message: 'Terjadi kegagalan pada server kami',
-        })
-        .code(500);
+      // return h
+      //   .response({
+      //     status: 'error',
+      //     message: 'Terjadi kegagalan pada server kami',
+      //   })
+      //   .code(500);
     }
 
     return h.continue;
