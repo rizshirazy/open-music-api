@@ -1,16 +1,29 @@
-const Hapi = require('@hapi/hapi');
-const albums = require('./api/albums');
-const songs = require('./api/songs');
-const ClientError = require('./exceptions/ClientError');
-const AlbumsService = require('./services/postgres/AlbumsService');
-const SongsService = require('./services/postgres/SongsService');
-const AlbumsValidator = require('./validator/albums');
-const SongsValidator = require('./validator/songs');
 require('dotenv').config();
 
+const Hapi = require('@hapi/hapi');
+const Jwt = require('@hapi/jwt');
+
+const albums = require('./api/albums');
+const authentications = require('./api/authentications');
+const songs = require('./api/songs');
+const users = require('./api/users');
+const ClientError = require('./exceptions/ClientError');
+const AlbumsService = require('./services/postgres/AlbumsService');
+const AuthenticationsService = require('./services/postgres/AuthenticationsService');
+const SongsService = require('./services/postgres/SongsService');
+const UsersService = require('./services/postgres/UsersService');
+const TokenManager = require('./tokenize/TokenManager');
+const AlbumsValidator = require('./validator/albums');
+const AuthenticationsValidator = require('./validator/authentications');
+const SongsValidator = require('./validator/songs');
+const UsersValidatior = require('./validator/users');
+
 const init = async () => {
+  const authenticationsService = new AuthenticationsService();
+  const usersService = new UsersService();
   const albumsService = new AlbumsService();
   const songsService = new SongsService();
+
   const server = Hapi.server({
     port: process.env.PORT || '5000',
     host: process.env.HOST || 'localhost',
@@ -19,6 +32,30 @@ const init = async () => {
         origin: ['*'],
       },
     },
+  });
+
+  // registrasi plugin eksternal
+  await server.register([
+    {
+      plugin: Jwt,
+    },
+  ]);
+
+  // mendefinisikan strategy autentikasi jwt
+  server.auth.strategy('openmusicapi_jwt', 'jwt', {
+    keys: process.env.ACCESS_TOKEN_KEY,
+    verify: {
+      aud: false,
+      iss: false,
+      sub: false,
+      maxAgeSec: process.env.ACCESS_TOKEN_AGE,
+    },
+    validate: (artifacts) => ({
+      isValid: true,
+      credentials: {
+        userId: artifacts.decoded.payload.userId,
+      },
+    }),
   });
 
   await server.register([
@@ -35,6 +72,22 @@ const init = async () => {
         songsService,
         albumsService,
         validator: SongsValidator,
+      },
+    },
+    {
+      plugin: users,
+      options: {
+        service: usersService,
+        validator: UsersValidatior,
+      },
+    },
+    {
+      plugin: authentications,
+      options: {
+        authenticationsService,
+        usersService,
+        tokenManager: TokenManager,
+        validator: AuthenticationsValidator,
       },
     },
   ]);
