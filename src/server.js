@@ -32,7 +32,8 @@ const init = async () => {
     {
       plugin: songs,
       options: {
-        service: songsService,
+        songsService,
+        albumsService,
         validator: SongsValidator,
       },
     },

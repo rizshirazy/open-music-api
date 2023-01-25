@@ -15,10 +15,4 @@ const isAlbumExists = async (id, pool) => {
   }
 };
 
-const mapSongResponse = (song) => ({
-  id: song.id,
-  title: song.title,
-  performer: song.performer,
-});
-
-module.exports = { isAlbumExists, mapSongResponse };
+module.exports = { isAlbumExists };

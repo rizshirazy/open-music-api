@@ -2,7 +2,6 @@ const { nanoid } = require('nanoid');
 const { Pool } = require('pg');
 const InvariantError = require('../../exceptions/InvariantError');
 const NotFoundError = require('../../exceptions/NotFoundError');
-const { isAlbumExists, mapSongResponse } = require('../../utils');
 
 class SongsService {
   constructor() {
@@ -17,8 +16,6 @@ class SongsService {
     duration = null,
     albumId = null,
   }) {
-    await isAlbumExists(albumId, this._pool);
-
     const id = `song-${nanoid(16)}`;
 
     const query = {
@@ -28,17 +25,22 @@ class SongsService {
 
     const result = await this._pool.query(query);
 
-    if (!result.rows.length) {
+    if (!result.rowCount) {
       throw new InvariantError('Lagu gagal ditambahkan');
     }
 
     return result.rows[0].id;
   }
 
-  async getSongs() {
-    const result = await this._pool.query({ text: 'SELECT * FROM songs' });
+  async getSongs(title = '', performer = '') {
+    const { rows } = await this._pool
+      .query({
+        text: 'SELECT id, title, performer FROM songs WHERE title ILIKE $1 and performer ILIKE $2',
+        values: [`%${title}%`, `%${performer}%`],
+      })
+      .catch((e) => console.error(e));
 
-    return result.rows.map(mapSongResponse);
+    return rows;
   }
 
   async getSongById(id) {
@@ -47,7 +49,7 @@ class SongsService {
       values: [id],
     });
 
-    if (!result.rows.length) {
+    if (!result.rowCount) {
       throw new NotFoundError('Lagu tidak ditemukan');
     }
 
@@ -56,10 +58,8 @@ class SongsService {
 
   async editSongById(
     id,
-    { title, year, genre, performer, duration = null, albumId = null }
+    { title, year, genre, performer, duration = null, albumId = null },
   ) {
-    await isAlbumExists(albumId, this._pool);
-
     const result = await this._pool
       .query({
         text: 'UPDATE songs SET title = $1, year = $2, genre = $3, performer = $4, duration = $5, album_id = $6 WHERE id = $7 RETURNING id',
@@ -69,7 +69,7 @@ class SongsService {
         console.error(e.message);
       });
 
-    if (!result.rows.length) {
+    if (!result.rowCount) {
       throw new NotFoundError('Gagal memperbarui lagu. Album tidak ditemukan');
     }
   }
@@ -80,7 +80,7 @@ class SongsService {
       values: [id],
     });
 
-    if (!result.rows.length) {
+    if (!result.rowCount) {
       throw new NotFoundError('Gagal menghapus lagu. Data tidak ditemukan');
     }
   }
