@@ -1,5 +1,3 @@
-/* eslint-disable object-curly-newline */
-/* eslint-disable comma-dangle */
 const AuthenticationsHandler = require('./handler');
 const routes = require('./routes');
 
@@ -8,13 +6,13 @@ module.exports = {
   version: '1.0.0',
   register: async (
     server,
-    { authenticationsService, usersService, tokenManager, validator }
+    { authenticationsService, usersService, tokenManager, validator },
   ) => {
     const authenticationsHandler = new AuthenticationsHandler(
       authenticationsService,
       usersService,
       tokenManager,
-      validator
+      validator,
     );
     server.route(routes(authenticationsHandler));
   },

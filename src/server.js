@@ -5,12 +5,14 @@ const Jwt = require('@hapi/jwt');
 
 const albums = require('./api/albums');
 const authentications = require('./api/authentications');
+const collaborations = require('./api/collaborations');
 const playlists = require('./api/playlists');
 const songs = require('./api/songs');
 const users = require('./api/users');
 const ClientError = require('./exceptions/ClientError');
 const AlbumsService = require('./services/postgres/AlbumsService');
 const AuthenticationsService = require('./services/postgres/AuthenticationsService');
+const CollaborationsService = require('./services/postgres/CollaborationsService');
 const PlaylistActivitiesService = require('./services/postgres/PlaylistActivitiesService');
 const PlaylistsService = require('./services/postgres/PlaylistService');
 const SongsService = require('./services/postgres/SongsService');
@@ -18,6 +20,7 @@ const UsersService = require('./services/postgres/UsersService');
 const TokenManager = require('./tokenize/TokenManager');
 const AlbumsValidator = require('./validator/albums');
 const AuthenticationsValidator = require('./validator/authentications');
+const CollaborationsValidator = require('./validator/collaborations');
 const PlaylistsValidator = require('./validator/playlists');
 const SongsValidator = require('./validator/songs');
 const UsersValidatior = require('./validator/users');
@@ -27,7 +30,8 @@ const init = async () => {
   const usersService = new UsersService();
   const albumsService = new AlbumsService();
   const songsService = new SongsService();
-  const playlistsService = new PlaylistsService(songsService);
+  const collaborationsService = new CollaborationsService(usersService);
+  const playlistsService = new PlaylistsService(collaborationsService);
   const playlistActivitesService = new PlaylistActivitiesService();
 
   const server = Hapi.server({
@@ -101,13 +105,22 @@ const init = async () => {
       options: {
         playlistsService,
         playlistActivitesService,
+        songsService,
         validator: PlaylistsValidator,
+      },
+    },
+    {
+      plugin: collaborations,
+      options: {
+        collaborationsService,
+        playlistsService,
+        usersService,
+        validator: CollaborationsValidator,
       },
     },
   ]);
 
   server.ext('onPreResponse', (request, h) => {
-    // mendapatkan konteks response dari request
     const { response } = request;
 
     if (response instanceof Error) {
@@ -120,18 +133,16 @@ const init = async () => {
           .code(response.statusCode);
       }
 
-      // mempertahankan penanganan client error oleh hapi secara native, seperti 404, etc.
       if (!response.isServer) {
         return h.continue;
       }
 
-      // penanganan server error sesuai kebutuhan
-      // return h
-      //   .response({
-      //     status: 'error',
-      //     message: 'Terjadi kegagalan pada server kami',
-      //   })
-      //   .code(500);
+      return h
+        .response({
+          status: 'error',
+          message: 'Terjadi kegagalan pada server kami',
+        })
+        .code(500);
     }
 
     return h.continue;
