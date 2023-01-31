@@ -1,6 +1,7 @@
 class AlbumsHandler {
-  constructor(service, validator) {
-    this._service = service;
+  constructor(albumsService, storageService, validator) {
+    this._albumsService = albumsService;
+    this._storageService = storageService;
     this._validator = validator;
   }
 
@@ -8,7 +9,7 @@ class AlbumsHandler {
     this._validator.validateAlbumPayload(request.payload);
 
     const { name, year } = request.payload;
-    const albumId = await this._service.addAlbum({ name, year });
+    const albumId = await this._albumsService.addAlbum({ name, year });
     return h
       .response({
         status: 'success',
@@ -22,7 +23,7 @@ class AlbumsHandler {
   async getAlbumByIdHandler(request, h) {
     const { id } = request.params;
 
-    const album = await this._service.getAlbumById(id);
+    const album = await this._albumsService.getAlbumById(id);
 
     return h.response({
       status: 'success',
@@ -38,7 +39,7 @@ class AlbumsHandler {
     const { id } = request.params;
     const { name, year } = request.payload;
 
-    await this._service.editAlbumById(id, { name, year });
+    await this._albumsService.editAlbumById(id, { name, year });
 
     return h.response({
       status: 'success',
@@ -46,14 +47,37 @@ class AlbumsHandler {
     });
   }
 
-  async deleteAlbumById(request, h) {
+  async deleteAlbumByIdHandler(request, h) {
     const { id } = request.params;
 
-    await this._service.deleteAlbumById(id);
+    await this._albumsService.deleteAlbumById(id);
     return h.response({
       status: 'success',
       message: 'Album berhasil dihapus',
     });
+  }
+
+  async postAlbumCoverByIdHandler(request, h) {
+    const { id } = request.params;
+    const { cover } = request.payload;
+
+    await this._validator.validateAlbumCoverPayload(cover.hapi.headers);
+    await this._albumsService.verifyAlbumExists(id);
+
+    const coverUrl = await this._storageService.writeFile(
+      cover,
+      cover.hapi,
+      id,
+    );
+
+    await this._albumsService.editAlbumCoverById(id, coverUrl);
+
+    return h
+      .response({
+        status: 'success',
+        message: 'Sampul berhasil diunggah',
+      })
+      .code(201);
   }
 }
 

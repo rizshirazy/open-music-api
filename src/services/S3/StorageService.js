@@ -5,10 +5,10 @@ class StorageService {
     this._S3 = new AWS.S3();
   }
 
-  writeFile(file, meta) {
+  writeFile(file, meta, id) {
     const parameter = {
       Bucket: process.env.AWS_BUCKET_NAME,
-      Key: +new Date() + meta.filename,
+      Key: `${id}_cover`,
       Body: file._data,
       ContentType: meta.headers['content-type'],
     };
