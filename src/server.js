@@ -20,6 +20,7 @@ const PlaylistsService = require('./services/postgres/PlaylistService');
 const SongsService = require('./services/postgres/SongsService');
 const UsersService = require('./services/postgres/UsersService');
 const StorageService = require('./services/S3/StorageService');
+const CacheService = require('./services/redis/CacheService');
 
 const TokenManager = require('./tokenize/TokenManager');
 const AlbumsValidator = require('./validator/albums');
@@ -34,7 +35,8 @@ const ExportsValidator = require('./validator/exports');
 const init = async () => {
   const authenticationsService = new AuthenticationsService();
   const usersService = new UsersService();
-  const albumsService = new AlbumsService();
+  const cacheService = new CacheService();
+  const albumsService = new AlbumsService(cacheService);
   const songsService = new SongsService();
   const collaborationsService = new CollaborationsService(usersService);
   const playlistsService = new PlaylistsService(collaborationsService);

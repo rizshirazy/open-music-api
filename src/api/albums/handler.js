@@ -61,7 +61,7 @@ class AlbumsHandler {
     const { id } = request.params;
     const { cover } = request.payload;
 
-    await this._validator.validateAlbumCoverPayload(cover.hapi.headers);
+    await this._validator.validateAlbumCoverHeader(cover.hapi.headers);
     await this._albumsService.verifyAlbumExists(id);
 
     const coverUrl = await this._storageService.writeFile(
@@ -78,6 +78,38 @@ class AlbumsHandler {
         message: 'Sampul berhasil diunggah',
       })
       .code(201);
+  }
+
+  async likeAlbumByIdHandler(request, h) {
+    const { id: albumId } = request.params;
+    const { userId } = request.auth.credentials;
+
+    const likeExist = await this._albumsService.likeAlbum(userId, albumId);
+
+    return h
+      .response({
+        status: 'success',
+        message: likeExist ? 'Batal menyukai album' : 'Berhasil menyukai album',
+      })
+      .code(201);
+  }
+
+  async getAlbumLikesByIdHandler(request, h) {
+    const { id } = request.params;
+
+    const { likes, isCache } = await this._albumsService.getAlbumLikes(id);
+
+    const response = h.response({
+      status: 'success',
+      data: {
+        likes,
+      },
+    });
+
+    if (isCache) {
+      response.header('X-Data-Source', 'cache');
+    }
+    return response;
   }
 }
 

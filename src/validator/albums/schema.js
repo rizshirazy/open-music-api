@@ -7,7 +7,7 @@ const AlbumsPayloadSchema = Joi.object({
   year: Joi.number().integer().min(1900).max(currentYear).required(),
 });
 
-const AlbumCoverPayloadSchema = Joi.object({
+const AlbumCoverHeaderSchema = Joi.object({
   'content-type': Joi.string()
     .valid(
       'image/apng',
@@ -20,4 +20,4 @@ const AlbumCoverPayloadSchema = Joi.object({
     .required(),
 }).unknown();
 
-module.exports = { AlbumsPayloadSchema, AlbumCoverPayloadSchema };
+module.exports = { AlbumsPayloadSchema, AlbumCoverHeaderSchema };
